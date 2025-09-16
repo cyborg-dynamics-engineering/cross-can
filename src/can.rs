@@ -17,6 +17,7 @@ pub struct CanFrame {
 }
 
 impl CanFrame {
+    /// Create a new Standard ID CAN data frame
     pub fn new(id: u32, data: &[u8]) -> Result<Self, &'static str> {
         Self::validate_id(id, false)?;
         Self::validate_data(data)?;
@@ -33,6 +34,7 @@ impl CanFrame {
         })
     }
 
+    /// Create a new Extended ID CAN data frame
     pub fn new_eff(id: u32, data: &[u8]) -> Result<Self, &'static str> {
         Self::validate_id(id, true)?;
         Self::validate_data(data)?;
@@ -49,6 +51,7 @@ impl CanFrame {
         })
     }
 
+    /// Create a new CAN remote frame
     pub fn new_remote(id: u32, dlc: usize, is_extended: bool) -> Result<Self, &'static str> {
         if dlc > 8 {
             return Err("RTR frame DLC must be <= 8");
@@ -65,6 +68,7 @@ impl CanFrame {
         })
     }
 
+    /// Create a new CAN error frame
     pub fn new_error(id: u32) -> Result<Self, &'static str> {
         if id > 0x1FFFFFFF {
             return Err("CAN error frame ID must be <= 29 bits");

@@ -15,6 +15,9 @@ pub struct CanSocket {
 }
 
 impl CanSocket {
+    /// Open a CAN device
+    ///
+    /// Can device is usually attached to a serial COM port (i.e. COM5). This method will open two separate pipes for reading and writing.
     pub fn open(channel: &str) -> tokio::io::Result<Self> {
         let sanitized = channel
             .chars()
@@ -32,6 +35,9 @@ impl CanSocket {
         })
     }
 
+    /// Open a read-only CAN device
+    ///
+    /// Can device is usually attached to a serial COM port (i.e. COM5). This method will a single pipe for reading CAN messages. Attempting to write to the port later will throw an InvalidData error.
     pub fn open_read_only(channel: &str) -> tokio::io::Result<Self> {
         let sanitized = channel
             .chars()
@@ -47,6 +53,9 @@ impl CanSocket {
         })
     }
 
+    /// Open a write-only CAN device
+    ///
+    /// Can device is usually attached to a serial COM port (i.e. COM5). This method will a single pipe for writing CAN messages. Attempting to read from the port later will throw an InvalidData error.
     pub fn open_write_only(channel: &str) -> tokio::io::Result<Self> {
         let sanitized = channel
             .chars()
@@ -62,6 +71,7 @@ impl CanSocket {
         })
     }
 
+    /// Async read a single CAN frame.
     pub async fn read_frame(&mut self) -> tokio::io::Result<CanFrame> {
         let reader = match &mut self.reader {
             Some(r) => r,
@@ -113,6 +123,7 @@ impl CanSocket {
         Ok(frame)
     }
 
+    /// Async write a single CAN frame.
     pub async fn write_frame(&mut self, frame: CanFrame) -> tokio::io::Result<()> {
         let writer = match &mut self.writer {
             Some(r) => r,
