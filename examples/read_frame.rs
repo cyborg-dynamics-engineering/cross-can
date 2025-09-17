@@ -1,15 +1,25 @@
 use crosscan::CrossCanSocket;
 
+#[cfg(target_os = "windows")]
+use crosscan::win_can::WinCanSocket as CanSocket;
+
+#[cfg(target_os = "linux")]
+use crosscan::lin_can::LinCanSocket as CanSocket;
+
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     let interface = std::env::args().nth(1).expect("Usage: program <interface>");
 
-    // Open the CrossCanSocket (async, works on both Unix and Windows)
-    let mut socket = CrossCanSocket::open(&interface)?;
-
+    // Open the desired CrossCanSocket depending on OS
+    let mut socket = CanSocket::open(&interface)?;
     println!("Listening on CAN interface: {}", interface);
 
-    // Loop to read and print incoming CAN frames
+    loop_read_frame(&mut socket).await?;
+
+    Ok(())
+}
+
+async fn loop_read_frame<T: CrossCanSocket>(socket: &mut T) -> std::io::Result<()> {
     loop {
         let frame = socket.read_frame().await?;
         println!(
