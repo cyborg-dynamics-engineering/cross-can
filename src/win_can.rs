@@ -1,4 +1,4 @@
-use crate::CrossCanSocket;
+use crate::CanInterface;
 ///
 /// win_can.rs
 ///
@@ -10,12 +10,12 @@ use std::io::{Error as IoError, ErrorKind};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeClient};
 
-pub struct WinCanSocket {
+pub struct WindowsCan {
     reader: Option<BufReader<NamedPipeClient>>,
     writer: Option<NamedPipeClient>,
 }
 
-impl CrossCanSocket for WinCanSocket {
+impl CanInterface for WindowsCan {
     /// Open a CAN device
     ///
     /// Can device is usually attached to a serial COM port (i.e. COM5). This method will open two separate pipes for reading and writing.
@@ -36,7 +36,7 @@ impl CrossCanSocket for WinCanSocket {
         })
     }
 
-    async fn read(&mut self) -> tokio::io::Result<CanFrame> {
+    async fn read_frame(&mut self) -> tokio::io::Result<CanFrame> {
         let reader = match &mut self.reader {
             Some(r) => r,
             None => {
@@ -87,7 +87,7 @@ impl CrossCanSocket for WinCanSocket {
         Ok(frame)
     }
 
-    async fn write(&mut self, frame: CanFrame) -> tokio::io::Result<()> {
+    async fn write_frame(&mut self, frame: CanFrame) -> tokio::io::Result<()> {
         let writer = match &mut self.writer {
             Some(r) => r,
             None => {
@@ -107,7 +107,7 @@ impl CrossCanSocket for WinCanSocket {
     }
 }
 
-impl WinCanSocket {
+impl WindowsCan {
     /// Open a read-only CAN device
     ///
     /// Can device is usually attached to a serial COM port (i.e. COM5). This method will a single pipe for reading CAN messages. Attempting to write to the port later will throw an InvalidData error.

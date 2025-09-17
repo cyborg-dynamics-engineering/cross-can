@@ -1,15 +1,16 @@
 pub mod can;
 use can::CanFrame;
 
-pub trait CrossCanSocket: Sized {
+pub trait CanInterface: Sized {
     /// Opens a CAN interface
     fn open(interface: &str) -> std::io::Result<Self>;
 
     /// Read a single CAN frame from the interface
-    fn read(&mut self) -> impl std::future::Future<Output = std::io::Result<CanFrame>> + Send;
+    fn read_frame(&mut self)
+    -> impl std::future::Future<Output = std::io::Result<CanFrame>> + Send;
 
     /// Write a single CAN frame from the interface
-    fn write(
+    fn write_frame(
         &mut self,
         frame: CanFrame,
     ) -> impl std::future::Future<Output = std::io::Result<()>> + Send;

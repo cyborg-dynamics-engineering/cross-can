@@ -1,21 +1,24 @@
 pub use socketcan::tokio::CanSocket;
 
-use crate::{CrossCanSocket, can::CanFrame};
+use crate::{CanInterface, can::CanFrame};
 
-impl CrossCanSocket for CanSocket {
+pub struct LinuxCan {
+    socket: CanSocket,
+}
+
+impl CanInterface for LinuxCan {
     fn open(interface: &str) -> std::io::Result<Self> {
-        let sock = CanSocket::open(interface)?;
-        Ok(sock)
+        Ok(CanSocket::open(interface)?)
     }
 
-    async fn read(&mut self) -> std::io::Result<CanFrame> {
-        match self.read_frame().await {
+    async fn read_frame(&mut self) -> std::io::Result<CanFrame> {
+        match self.socket.read_frame().await {
             Ok(frame) => Ok(frame.into()),
             Err(e) => Err(e),
         }
     }
 
-    async fn write(&mut self, frame: CanFrame) -> std::io::Result<()> {
-        self.write_frame(frame.into()).await
+    async fn write_frame(&mut self, frame: CanFrame) -> std::io::Result<()> {
+        self.socket.write_frame(frame.into()).await
     }
 }
