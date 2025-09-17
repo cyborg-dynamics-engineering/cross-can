@@ -6,11 +6,10 @@ pub trait CrossCanSocket: Sized {
     fn open(interface: &str) -> std::io::Result<Self>;
 
     /// Read a single CAN frame from the interface
-    fn read_frame(&mut self)
-    -> impl std::future::Future<Output = std::io::Result<CanFrame>> + Send;
+    fn read(&mut self) -> impl std::future::Future<Output = std::io::Result<CanFrame>> + Send;
 
     /// Write a single CAN frame from the interface
-    fn write_frame(
+    fn write(
         &mut self,
         frame: CanFrame,
     ) -> impl std::future::Future<Output = std::io::Result<()>> + Send;

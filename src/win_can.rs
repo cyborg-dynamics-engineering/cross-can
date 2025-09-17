@@ -36,7 +36,7 @@ impl CrossCanSocket for WinCanSocket {
         })
     }
 
-    async fn read_frame(&mut self) -> tokio::io::Result<CanFrame> {
+    async fn read(&mut self) -> tokio::io::Result<CanFrame> {
         let reader = match &mut self.reader {
             Some(r) => r,
             None => {
@@ -87,7 +87,7 @@ impl CrossCanSocket for WinCanSocket {
         Ok(frame)
     }
 
-    async fn write_frame(&mut self, frame: CanFrame) -> tokio::io::Result<()> {
+    async fn write(&mut self, frame: CanFrame) -> tokio::io::Result<()> {
         let writer = match &mut self.writer {
             Some(r) => r,
             None => {

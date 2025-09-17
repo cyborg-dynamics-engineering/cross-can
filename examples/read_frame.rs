@@ -1,10 +1,9 @@
 use crosscan::CrossCanSocket;
 
+#[cfg(target_os = "linux")]
+use crosscan::lin_can::CanSocket;
 #[cfg(target_os = "windows")]
 use crosscan::win_can::WinCanSocket as CanSocket;
-
-#[cfg(target_os = "linux")]
-use crosscan::lin_can::LinCanSocket as CanSocket;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -21,7 +20,7 @@ async fn main() -> std::io::Result<()> {
 
 async fn loop_read_frame<T: CrossCanSocket>(socket: &mut T) -> std::io::Result<()> {
     loop {
-        let frame = socket.read_frame().await?;
+        let frame = socket.read().await?;
         println!(
             "{:?} ID=0x{:X} Extended={} RTR={} Error={} [{}]",
             frame.timestamp().unwrap_or(0),
