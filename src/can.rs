@@ -1,7 +1,7 @@
 ///
 /// can.rs
 ///
-/// Provides an abstracted CanFrame data struct for use across operating systems.
+/// Provides an abstracted CanFrame data struct.
 ///
 use serde::{Deserialize, Serialize};
 

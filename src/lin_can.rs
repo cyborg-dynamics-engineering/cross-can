@@ -1,6 +1,10 @@
-pub use socketcan::tokio::CanSocket;
-
+///
+/// lin_can.rs
+///
+/// Implementation of CanInterface for Linux using SocketCan.
+///
 use crate::{CanInterface, can::CanFrame};
+use socketcan::tokio::CanSocket;
 
 pub struct LinuxCan {
     socket: CanSocket,

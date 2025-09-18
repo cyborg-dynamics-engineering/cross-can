@@ -1,6 +1,7 @@
 pub mod can;
 use can::CanFrame;
 
+/// A generic async CAN interface for reading and writing CAN frames
 pub trait CanInterface: Sized {
     /// Opens a CAN interface
     fn open(interface: &str) -> std::io::Result<Self>;

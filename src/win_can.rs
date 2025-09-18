@@ -1,11 +1,10 @@
-use crate::CanInterface;
 ///
 /// win_can.rs
 ///
-/// Implementation of a 'socketcan-like' CAN interface for Windows using pipes.
+/// Implementation of CanInterface for Windows using pipes.
 /// Will require an existing pipe server to be connected to a CAN port using the 'win_can_utils' package.
 ///
-use crate::can::CanFrame;
+use crate::{CanInterface, can::CanFrame};
 use std::io::{Error as IoError, ErrorKind};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeClient};
