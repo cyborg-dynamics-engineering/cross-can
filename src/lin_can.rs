@@ -12,7 +12,9 @@ pub struct LinuxCan {
 
 impl CanInterface for LinuxCan {
     fn open(interface: &str) -> std::io::Result<Self> {
-        Ok(CanSocket::open(interface)?)
+        Ok(LinuxCan {
+            socket: CanSocket::open(interface)?,
+        })
     }
 
     async fn read_frame(&mut self) -> std::io::Result<CanFrame> {
