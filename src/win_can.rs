@@ -6,7 +6,7 @@
 ///
 use crate::{CanInterface, can::CanFrame};
 use std::io::{Error as IoError, ErrorKind};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeClient};
 
 pub struct WindowsCan {
@@ -46,44 +46,16 @@ impl CanInterface for WindowsCan {
             }
         };
 
-        let mut line = String::new();
-        let bytes = reader.read_line(&mut line).await?;
-        if bytes == 0 {
+        let mut buf = vec![];
+        let num_bytes = reader.read(&mut buf).await?;
+        if num_bytes == 0 {
             return Err(IoError::new(ErrorKind::UnexpectedEof, "Pipe closed"));
         }
 
-        let json: serde_json::Value = serde_json::from_str(&line.trim())
-            .map_err(|e| IoError::new(ErrorKind::InvalidData, e))?;
-
-        let id = json["id"]
-            .as_u64()
-            .ok_or_else(|| IoError::new(ErrorKind::InvalidData, "Missing id"))?
-            as u32;
-        let extended = json["is_extended"].as_bool().unwrap_or(false);
-        let rtr = json["rtr"].as_bool().unwrap_or(false);
-        let err = json["error"].as_bool().unwrap_or(false);
-
-        let data = json["data"]
-            .as_array()
-            .ok_or_else(|| IoError::new(ErrorKind::InvalidData, "Missing data"))?
-            .iter()
-            .map(|v| v.as_u64().unwrap_or(0) as u8)
-            .collect::<Vec<_>>();
-
-        let mut frame = if rtr {
-            CanFrame::new_remote(id, data.len(), extended)
-        } else if err {
-            CanFrame::new_error(id)
-        } else if extended {
-            CanFrame::new_eff(id, &data)
-        } else {
-            CanFrame::new(id, &data)
+        match bincode::serde::decode_from_slice::<CanFrame, _>(&buf, bincode::config::standard()) {
+            Ok((frame, _)) => Ok(frame),
+            Err(e) => Err(IoError::new(ErrorKind::Other, e)),
         }
-        .map_err(|e| IoError::new(ErrorKind::InvalidData, e))?;
-
-        frame.set_timestamp(json.get("timestamp").and_then(|v| v.as_u64()));
-
-        Ok(frame)
     }
 
     async fn write_frame(&mut self, frame: CanFrame) -> tokio::io::Result<()> {
@@ -97,12 +69,15 @@ impl CanInterface for WindowsCan {
             }
         };
 
-        let serialized =
-            serde_json::to_string(&frame).map_err(|e| IoError::new(ErrorKind::InvalidInput, e))?;
-        writer.write_all(serialized.as_bytes()).await?;
-        writer.write_all(b"\n").await?;
-        writer.flush().await?;
-        Ok(())
+        match bincode::serde::encode_to_vec(frame, bincode::config::standard()) {
+            Ok(data) => {
+                writer.write_all(&data).await?;
+                writer.write_all(b"\n").await?;
+                writer.flush().await?;
+                Ok(())
+            }
+            Err(e) => Err(IoError::new(ErrorKind::Other, e)),
+        }
     }
 }
 
