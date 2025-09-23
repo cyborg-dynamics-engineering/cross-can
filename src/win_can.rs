@@ -5,6 +5,7 @@
 /// Will require an existing pipe server to be connected to a CAN port using the 'win_can_utils' package.
 ///
 use crate::{CanInterface, can::CanFrame};
+use bincode;
 use std::io::{Error as IoError, ErrorKind};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeClient};
@@ -46,10 +47,13 @@ impl CanInterface for WindowsCan {
             }
         };
 
-        let mut buf = vec![];
-        let num_bytes = reader.read(&mut buf).await?;
+        let mut buf = Vec::with_capacity(1000);
+        let num_bytes = reader.read_buf(&mut buf).await?;
         if num_bytes == 0 {
-            return Err(IoError::new(ErrorKind::UnexpectedEof, "Pipe closed"));
+            return Err(IoError::new(
+                ErrorKind::UnexpectedEof,
+                "Pipe closed. EOF was reached (closed connection) or buffer was full",
+            ));
         }
 
         match bincode::serde::decode_from_slice::<CanFrame, _>(&buf, bincode::config::standard()) {
