@@ -9,8 +9,10 @@ default = []
 [target.'cfg(target_os = "linux")'.dependencies]
 socketcan = { version = "3.5", features = ["tokio"] }
 
+[target.'cfg(target_os = "windows")'.dependencies]
+bincode = { version = "2.0.1", features = ["serde"] }
+
 [dependencies]
 tokio = { version = "1.47", features = ["full"] }
 async-trait = "0.1"
 serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
