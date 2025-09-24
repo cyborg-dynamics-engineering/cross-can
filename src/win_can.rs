@@ -58,12 +58,12 @@ impl CanInterface for WindowsCan {
             Ok(())
         };
 
-        // Read the length prefix of next CanFrame (always 4 bytes)
-        let mut len_prefix = [0u8; 4];
+        // Read the length prefix of next CanFrame (always 1 byte)
+        let mut len_prefix = [0u8; 1];
         check_bytes(reader.read_exact(&mut len_prefix).await?)?;
 
         // Read the bytes for the next CanFrame
-        let mut buf = vec![0u8; u32::from_le_bytes(len_prefix) as usize];
+        let mut buf = vec![0u8; len_prefix[0] as usize];
         check_bytes(reader.read_exact(&mut buf).await?)?;
 
         // Deserialize CanFrame bytes into struct
