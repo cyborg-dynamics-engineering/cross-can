@@ -47,15 +47,26 @@ impl CanInterface for WindowsCan {
             }
         };
 
-        let mut buf = Vec::with_capacity(1000);
-        let num_bytes = reader.read_buf(&mut buf).await?;
-        if num_bytes == 0 {
-            return Err(IoError::new(
-                ErrorKind::UnexpectedEof,
-                "Pipe closed. EOF was reached (closed connection) or buffer was full",
-            ));
-        }
+        // Helper function to check if BufReader.read_exact() is returning zero bytes (issue has occured)
+        let check_bytes = |num_bytes: usize| {
+            if num_bytes == 0 {
+                return Err(IoError::new(
+                    ErrorKind::UnexpectedEof,
+                    "Pipe closed. EOF was reached (closed connection) or buffer was full",
+                ));
+            }
+            Ok(())
+        };
 
+        // Read the length prefix of next CanFrame (always 4 bytes)
+        let mut len_prefix = [0u8; 4];
+        check_bytes(reader.read_exact(&mut len_prefix).await?)?;
+
+        // Read the bytes for the next CanFrame
+        let mut buf = vec![0u8; u32::from_le_bytes(len_prefix) as usize];
+        check_bytes(reader.read_exact(&mut buf).await?)?;
+
+        // Deserialize CanFrame bytes into struct
         match bincode::serde::decode_from_slice::<CanFrame, _>(&buf, bincode::config::standard()) {
             Ok((frame, _)) => Ok(frame),
             Err(e) => Err(IoError::new(ErrorKind::Other, e)),
