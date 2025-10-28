@@ -94,6 +94,10 @@ impl CanInterface for WindowsCan {
             Err(e) => Err(IoError::new(ErrorKind::Other, e)),
         }
     }
+
+    fn get_bitrate(&mut self) -> std::io::Result<Option<u32>> {
+        todo!()
+    }
 }
 
 impl WindowsCan {
