@@ -30,7 +30,7 @@ impl CanInterface for LinuxCan {
         self.socket.write_frame(frame.into()).await
     }
 
-    fn get_bitrate(&mut self) -> std::io::Result<Option<u32>> {
+    async fn get_bitrate(&mut self) -> std::io::Result<Option<u32>> {
         let iface = nl::CanInterface::open(&self.interface)?;
 
         iface

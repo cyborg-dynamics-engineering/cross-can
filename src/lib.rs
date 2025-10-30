@@ -16,7 +16,7 @@ pub trait CanInterface: Sized {
         frame: CanFrame,
     ) -> impl std::future::Future<Output = std::io::Result<()>> + Send;
 
-    /// Returns the bitrate of the CAN bus. Returns None if there is no active connection
+    /// Returns the bitrate of the CAN bus. Returns None if no bitrate is configured
     fn get_bitrate(
         &mut self,
     ) -> impl std::future::Future<Output = std::io::Result<Option<u32>>> + Send;
