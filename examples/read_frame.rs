@@ -16,6 +16,13 @@ async fn main() -> std::io::Result<()> {
 }
 
 async fn loop_read_frame<T: CanInterface>(can_interface: &mut T) -> std::io::Result<()> {
+    // Log bitrate of CAN bus
+    match can_interface.get_bitrate().await? {
+        Some(br) => println!("Bitrate: {:?}\n", br),
+        None => println!("No bitrate configured.\n"),
+    }
+
+    // Read can frames repeatedly
     loop {
         let frame = can_interface.read_frame().await?;
         println!(

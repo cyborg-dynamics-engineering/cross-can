@@ -6,6 +6,7 @@
 ///
 use crate::{CanInterface, can::CanFrame};
 use bincode;
+use serde::{Deserialize, Serialize};
 use std::io::{Error as IoError, ErrorKind};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeClient};
@@ -13,6 +14,12 @@ use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeClient};
 pub struct WindowsCan {
     reader: Option<BufReader<NamedPipeClient>>,
     writer: Option<NamedPipeClient>,
+    channel: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct CanServerConfig {
+    pub bitrate: u32,
 }
 
 impl CanInterface for WindowsCan {
@@ -25,14 +32,15 @@ impl CanInterface for WindowsCan {
             .map(|c| if c.is_alphanumeric() { c } else { '_' })
             .collect::<String>();
         let out_pipe_name = format!(r"\\.\pipe\can_{}_out", sanitized);
-        let in_pipe_name = format!(r"\\.\pipe\can_{}_in", sanitized);
-
         let out_pipe = ClientOptions::new().open(&out_pipe_name)?;
+
+        let in_pipe_name = format!(r"\\.\pipe\can_{}_in", sanitized);
         let in_pipe = ClientOptions::new().open(&in_pipe_name)?;
 
         Ok(Self {
             reader: Some(BufReader::new(out_pipe)),
             writer: Some(in_pipe),
+            channel: sanitized,
         })
     }
 
@@ -95,8 +103,20 @@ impl CanInterface for WindowsCan {
         }
     }
 
-    fn get_bitrate(&mut self) -> std::io::Result<Option<u32>> {
-        todo!()
+    async fn get_bitrate(&mut self) -> std::io::Result<Option<u32>> {
+        // Connect to config pipe
+        let config_pipe_name = format!(r"\\.\pipe\can_{}_config_out", self.channel);
+        let config_pipe = ClientOptions::new().open(&config_pipe_name)?;
+        let mut config_reader = BufReader::new(config_pipe);
+
+        // Read the config struct
+        let mut buf = Vec::new();
+        config_reader.read_to_end(&mut buf).await?;
+
+        // Deserialize CanFrame bytes into struct
+        let config = serde_json::from_slice::<CanServerConfig>(&buf)?;
+
+        Ok(Some(config.bitrate))
     }
 }
 
@@ -116,6 +136,7 @@ impl WindowsCan {
         Ok(Self {
             reader: Some(BufReader::new(out_pipe)),
             writer: None,
+            channel: sanitized,
         })
     }
 
@@ -134,6 +155,7 @@ impl WindowsCan {
         Ok(Self {
             reader: None,
             writer: Some(in_pipe),
+            channel: sanitized,
         })
     }
 }
