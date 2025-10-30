@@ -19,7 +19,7 @@ pub struct WindowsCan {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CanServerConfig {
-    pub bitrate: u32,
+    pub bitrate: Option<u32>,
 }
 
 impl CanInterface for WindowsCan {
@@ -116,7 +116,7 @@ impl CanInterface for WindowsCan {
         // Deserialize CanFrame bytes into struct
         let config = serde_json::from_slice::<CanServerConfig>(&buf)?;
 
-        Ok(Some(config.bitrate))
+        Ok(config.bitrate)
     }
 }
 
