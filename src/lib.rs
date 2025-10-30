@@ -4,7 +4,7 @@ use can::CanFrame;
 /// A generic async CAN interface for reading and writing CAN frames
 pub trait CanInterface: Sized {
     /// Opens a CAN interface
-    fn open(interface: &str) -> std::io::Result<Self>;
+    fn open(interface: &str) -> impl std::future::Future<Output = std::io::Result<Self>> + Send;
 
     /// Read a single CAN frame from the interface
     fn read_frame(&mut self)

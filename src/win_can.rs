@@ -11,6 +11,9 @@ use std::io::{Error as IoError, ErrorKind};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeClient};
 
+// The CanInterface will fail to open a connection to a win_can_utils canserver if it isn't the matching version.
+const WIN_CAN_UTILS_TARGET_VERSION: &str = "0.2.0";
+
 pub struct WindowsCan {
     reader: Option<BufReader<NamedPipeClient>>,
     writer: Option<NamedPipeClient>,
@@ -20,13 +23,14 @@ pub struct WindowsCan {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CanServerConfig {
     pub bitrate: Option<u32>,
+    pub version: String,
 }
 
 impl CanInterface for WindowsCan {
     /// Open a CAN device
     ///
     /// Can device is usually attached to a serial COM port (i.e. COM5). This method will open two separate pipes for reading and writing.
-    fn open(channel: &str) -> tokio::io::Result<Self> {
+    async fn open(channel: &str) -> tokio::io::Result<Self> {
         let sanitized = channel
             .chars()
             .map(|c| if c.is_alphanumeric() { c } else { '_' })
@@ -37,11 +41,25 @@ impl CanInterface for WindowsCan {
         let in_pipe_name = format!(r"\\.\pipe\can_{}_in", sanitized);
         let in_pipe = ClientOptions::new().open(&in_pipe_name)?;
 
-        Ok(Self {
+        let interface = Self {
             reader: Some(BufReader::new(out_pipe)),
             writer: Some(in_pipe),
             channel: sanitized,
-        })
+        };
+
+        // Check the version number of the win_can_utils package that we are connecting to
+        let ver = interface.get_config().await?.version;
+        if ver != WIN_CAN_UTILS_TARGET_VERSION.to_string() {
+            return Err(IoError::new(
+                ErrorKind::InvalidData,
+                format!(
+                    "Installed win_can_utils is version {:?}. Version {:?} is required.",
+                    ver, WIN_CAN_UTILS_TARGET_VERSION
+                ),
+            ));
+        }
+
+        Ok(interface)
     }
 
     async fn read_frame(&mut self) -> tokio::io::Result<CanFrame> {
@@ -104,18 +122,7 @@ impl CanInterface for WindowsCan {
     }
 
     async fn get_bitrate(&mut self) -> std::io::Result<Option<u32>> {
-        // Connect to config pipe
-        let config_pipe_name = format!(r"\\.\pipe\can_{}_config_out", self.channel);
-        let config_pipe = ClientOptions::new().open(&config_pipe_name)?;
-        let mut config_reader = BufReader::new(config_pipe);
-
-        // Read the config struct
-        let mut buf = Vec::new();
-        config_reader.read_to_end(&mut buf).await?;
-
-        // Deserialize CanFrame bytes into struct
-        let config = serde_json::from_slice::<CanServerConfig>(&buf)?;
-
+        let config = self.get_config().await?;
         Ok(config.bitrate)
     }
 }
@@ -157,5 +164,21 @@ impl WindowsCan {
             writer: Some(in_pipe),
             channel: sanitized,
         })
+    }
+
+    pub async fn get_config(&self) -> std::io::Result<CanServerConfig> {
+        // Connect to config pipe
+        let config_pipe_name = format!(r"\\.\pipe\can_{}_config_out", self.channel);
+        let config_pipe = ClientOptions::new().open(&config_pipe_name)?;
+        let mut config_reader = BufReader::new(config_pipe);
+
+        // Read the config struct
+        let mut buf = Vec::new();
+        config_reader.read_to_end(&mut buf).await?;
+
+        // Deserialize CanFrame bytes into struct
+        let config = serde_json::from_slice::<CanServerConfig>(&buf)?;
+
+        Ok(config)
     }
 }

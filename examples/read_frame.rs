@@ -6,9 +6,9 @@ async fn main() -> std::io::Result<()> {
 
     // Open the desired CanInterface depending on OS
     #[cfg(target_os = "linux")]
-    let mut can_interface = crosscan::lin_can::LinuxCan::open(&interface)?;
+    let mut can_interface = crosscan::lin_can::LinuxCan::open(&interface).await?;
     #[cfg(target_os = "windows")]
-    let mut can_interface = crosscan::win_can::WindowsCan::open(&interface)?;
+    let mut can_interface = crosscan::win_can::WindowsCan::open(&interface).await?;
 
     println!("Listening on CAN interface: {}", interface);
     loop_read_frame(&mut can_interface).await?;
