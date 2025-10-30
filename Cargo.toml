@@ -1,6 +1,6 @@
 [package]
 name = "crosscan"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 
 [features]
@@ -11,6 +11,7 @@ socketcan = { version = "3.5", features = ["tokio"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 bincode = { version = "2.0.1", features = ["serde"] }
+serde_json = "1.0.145"
 
 [dependencies]
 tokio = { version = "1.47", features = ["full"] }
