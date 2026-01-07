@@ -6,14 +6,14 @@
 ///
 use crate::{CanInterface, can::CanFrame};
 use bincode;
-use semver::Version;
+use semver::{Version, VersionReq};
 use serde::{Deserialize, Serialize};
 use std::io::{Error as IoError, ErrorKind};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeClient};
 
 // The CanInterface will fail to open a connection to a win_can_utils canserver if it isn't the matching version.
-const WIN_CAN_UTILS_TARGET_VERSION: &str = "0.2";
+const WIN_CAN_UTILS_TARGET_VERSION: &str = ">=0.2, <0.3";
 
 pub struct WindowsCan {
     reader: Option<BufReader<NamedPipeClient>>,
@@ -57,7 +57,7 @@ impl CanInterface for WindowsCan {
             )
         })?;
 
-        let required = Version::parse(WIN_CAN_UTILS_TARGET_VERSION).map_err(|e| {
+        let required = VersionReq::parse(WIN_CAN_UTILS_TARGET_VERSION).map_err(|e| {
             IoError::new(
                 ErrorKind::InvalidData,
                 format!(
@@ -68,7 +68,7 @@ impl CanInterface for WindowsCan {
         })?;
 
         // Compare only major + minor
-        if installed.major != required.major || installed.minor != required.minor {
+        if !required.matches(&installed) {
             return Err(IoError::new(
                 ErrorKind::InvalidData,
                 format!(
