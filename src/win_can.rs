@@ -6,13 +6,14 @@
 ///
 use crate::{CanInterface, can::CanFrame};
 use bincode;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use std::io::{Error as IoError, ErrorKind};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::windows::named_pipe::{ClientOptions, NamedPipeClient};
 
 // The CanInterface will fail to open a connection to a win_can_utils canserver if it isn't the matching version.
-const WIN_CAN_UTILS_TARGET_VERSION: &str = "0.2.0";
+const WIN_CAN_UTILS_TARGET_VERSION: &str = "0.2";
 
 pub struct WindowsCan {
     reader: Option<BufReader<NamedPipeClient>>,
@@ -47,14 +48,32 @@ impl CanInterface for WindowsCan {
             channel: sanitized,
         };
 
-        // Check the version number of the win_can_utils package that we are connecting to
-        let ver = interface.get_config().await?.version;
-        if ver != WIN_CAN_UTILS_TARGET_VERSION.to_string() {
+        let ver_str = interface.get_config().await?.version;
+
+        let installed = Version::parse(&ver_str).map_err(|e| {
+            IoError::new(
+                ErrorKind::InvalidData,
+                format!("Invalid installed version {:?}: {}", ver_str, e),
+            )
+        })?;
+
+        let required = Version::parse(WIN_CAN_UTILS_TARGET_VERSION).map_err(|e| {
+            IoError::new(
+                ErrorKind::InvalidData,
+                format!(
+                    "Invalid required version {:?}: {}",
+                    WIN_CAN_UTILS_TARGET_VERSION, e
+                ),
+            )
+        })?;
+
+        // Compare only major + minor
+        if installed.major != required.major || installed.minor != required.minor {
             return Err(IoError::new(
                 ErrorKind::InvalidData,
                 format!(
-                    "Installed win_can_utils is version {:?}. Version {:?} is required.",
-                    ver, WIN_CAN_UTILS_TARGET_VERSION
+                    "Installed win_can_utils is version {}. Version {}.* is required.",
+                    installed, required
                 ),
             ));
         }
