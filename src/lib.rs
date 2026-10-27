@@ -1,4 +1,7 @@
 pub mod can;
+pub mod protocol;
+#[cfg(target_os = "windows")]
+pub mod service;
 use can::CanFrame;
 
 /// A generic async CAN interface for reading and writing CAN frames
